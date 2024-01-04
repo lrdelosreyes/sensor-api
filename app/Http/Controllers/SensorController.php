@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Sensor;
 use App\Http\Requests\StoreSensorRequest;
 use App\Http\Requests\UpdateSensorRequest;
+use App\Models\Reading;
+use Carbon\Carbon;
 
 class SensorController extends Controller
 {
@@ -14,8 +16,20 @@ class SensorController extends Controller
     public function index()
     {
         $sensors = Sensor::query()
-            ->with('readings')
+            ->with('reading')
             ->get();
+
+        return response()->json([
+            'data' => $sensors
+        ]);
+    }
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function indexPaginated()
+    {
+        $sensors = Sensor::query()->paginate(15);
 
         return response()->json([
             'data' => $sensors
@@ -44,9 +58,36 @@ class SensorController extends Controller
      */
     public function show(Sensor $sensor)
     {
-        $data = $sensor::with('readings')
-            ->where('id', $sensor->id)
-            ->firstOrFail();
+        $data = $sensor::where('id', $sensor->id)->firstOrFail();
+
+        $yearly = Reading::query()
+            ->select('reading_value', 'unit', 'logged_at')
+            ->where('sensor_id', $sensor->id)
+            ->whereBetween('logged_at', [
+                Carbon::createFromDate(Carbon::now()->year, '01', '01'),
+                Carbon::now()
+            ])
+            ->orderBy('logged_at')
+            ->get();
+        $monthly = Reading::query()
+            ->select('reading_value', 'unit', 'logged_at')
+            ->where('sensor_id', $sensor->id)
+            ->whereBetween('logged_at', [
+                Carbon::createFromDate(Carbon::now()->year, Carbon::now()->month, '01'),
+                Carbon::now()
+            ])
+            ->orderBy('logged_at', 'asc')
+            ->get();
+        $daily = Reading::query()
+            ->select('reading_value', 'unit', 'logged_at')
+            ->where('sensor_id', $sensor->id)
+            ->whereBetween('logged_at', [Carbon::now(), Carbon::now()])
+            ->orderBy('logged_at', 'asc')
+            ->get();
+
+        $data->yearly_readings = $yearly;
+        $data->monthly_readings = $monthly;
+        $data->daily_readings = $daily;
 
         return response()->json([
             'data' => $data

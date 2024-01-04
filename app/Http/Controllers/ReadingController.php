@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Reading;
 use App\Http\Requests\StoreReadingRequest;
-use App\Models\Sensor;
 
 class ReadingController extends Controller
 {

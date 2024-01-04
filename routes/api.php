@@ -31,6 +31,7 @@ Route::group([
     Route::name('sensor.')
         ->group(function() {
             Route::get('/sensors', [SensorController::class, 'index'])->name('index');
+            Route::get('/sensors/paginated', [SensorController::class, 'indexPaginated'])->name('index.paginated');
             Route::get('/sensors/{sensor}', [SensorController::class, 'show'])->name('show');
             Route::post('/sensors', [SensorController::class, 'store'])->name('store');
             Route::patch('/sensors/{sensor}', [SensorController::class, 'update'])->name('update');
