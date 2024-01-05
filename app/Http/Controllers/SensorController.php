@@ -81,7 +81,7 @@ class SensorController extends Controller
         $daily = Reading::query()
             ->select('reading_value', 'unit', 'logged_at')
             ->where('sensor_id', $sensor->id)
-            ->whereBetween('logged_at', [Carbon::now(), Carbon::now()])
+            ->whereDate('logged_at', Carbon::now())
             ->orderBy('logged_at', 'asc')
             ->get();
 
