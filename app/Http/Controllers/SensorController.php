@@ -75,7 +75,7 @@ class SensorController extends Controller
             ->map(function($row) {
                 return (Object) [
                     'logged_at' => $row[0]->logged_at->format('Y-m'),
-                    'reading_value' => $row->sum('reading_value'),
+                    'reading_value' => $row->avg('reading_value'),
                     'unit' => $row[0]->unit
                 ];
             });
@@ -94,7 +94,7 @@ class SensorController extends Controller
             ->map(function($row) {
                 return (Object) [
                     'logged_at' => $row[0]->logged_at->format('Y-m-d'),
-                    'reading_value' => $row->sum('reading_value'),
+                    'reading_value' => $row->avg('reading_value'),
                     'unit' => $row[0]->unit
                 ];
             });
@@ -110,7 +110,7 @@ class SensorController extends Controller
             ->map(function($row) {
                 return (Object) [
                     'logged_at' => $row[0]->logged_at->format('Y-m-d H'),
-                    'reading_value' => $row->sum('reading_value'),
+                    'reading_value' => $row->avg('reading_value'),
                     'unit' => $row[0]->unit
                 ];
             });
