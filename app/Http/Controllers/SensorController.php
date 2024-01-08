@@ -71,13 +71,6 @@ class SensorController extends Controller
             ->get()
              ->groupBy(function($query) {
                 return $query->logged_at->format('Y-m');
-            })
-            ->map(function($row) {
-                return (Object) [
-                    'logged_at' => $row[0]->logged_at->format('Y-m'),
-                    'reading_value' => $row->avg('reading_value'),
-                    'unit' => $row[0]->unit
-                ];
             });
         $_monthly = Reading::query()
             ->select('reading_value', 'unit', 'logged_at')
@@ -90,13 +83,6 @@ class SensorController extends Controller
             ->get()
             ->groupBy(function($query) {
                 return $query->logged_at->format('Y-m-d');
-            })
-            ->map(function($row) {
-                return (Object) [
-                    'logged_at' => $row[0]->logged_at->format('Y-m-d'),
-                    'reading_value' => $row->avg('reading_value'),
-                    'unit' => $row[0]->unit
-                ];
             });
         $_daily = Reading::query()
             ->select('reading_value', 'unit', 'logged_at')
@@ -106,34 +92,132 @@ class SensorController extends Controller
             ->get()
             ->groupBy(function($query) {
                 return $query->logged_at->format('Y-m-d H');
-            })
-            ->map(function($row) {
-                return (Object) [
-                    'logged_at' => $row[0]->logged_at->format('Y-m-d H'),
-                    'reading_value' => $row->avg('reading_value'),
-                    'unit' => $row[0]->unit
-                ];
             });
 
-        $yearly = [];
-        $monthly = [];
-        $daily = [];
+        $_yearlyMax = $_yearly->map(function($row) {
+            return (Object) [
+                'logged_at' => $row[0]->logged_at->format('Y-m'),
+                'reading_value' => $row->max('reading_value'),
+                'unit' => $row[0]->unit
+            ];
+        });
+        $_yearlyMin = $_yearly->map(function($row) {
+            return (Object) [
+                'logged_at' => $row[0]->logged_at->format('Y-m'),
+                'reading_value' => $row->min('reading_value'),
+                'unit' => $row[0]->unit
+            ];
+        });
+        $_yearlyAvg = $_yearly->map(function($row) {
+            return (Object) [
+                'logged_at' => $row[0]->logged_at->format('Y-m'),
+                'reading_value' => $row->avg('reading_value'),
+                'unit' => $row[0]->unit
+            ];
+        });
 
-        foreach ($_yearly as $row) {
-            $yearly[] = $row;
+        $_monthlyMax = $_monthly->map(function($row) {
+            return (Object) [
+                'logged_at' => $row[0]->logged_at->format('Y-m-d'),
+                'reading_value' => $row->max('reading_value'),
+                'unit' => $row[0]->unit
+            ];
+        });
+        $_monthlyMin = $_monthly->map(function($row) {
+            return (Object) [
+                'logged_at' => $row[0]->logged_at->format('Y-m-d'),
+                'reading_value' => $row->min('reading_value'),
+                'unit' => $row[0]->unit
+            ];
+        });
+        $_monthlyAvg = $_monthly->map(function($row) {
+            return (Object) [
+                'logged_at' => $row[0]->logged_at->format('Y-m-d'),
+                'reading_value' => $row->avg('reading_value'),
+                'unit' => $row[0]->unit
+            ];
+        });
+
+        $_dailyMax = $_daily->map(function($row) {
+            return (Object) [
+                'logged_at' => $row[0]->logged_at->format('Y-m-d H'),
+                'reading_value' => $row->max('reading_value'),
+                'unit' => $row[0]->unit
+            ];
+        });
+        $_dailyMin = $_daily->map(function($row) {
+            return (Object) [
+                'logged_at' => $row[0]->logged_at->format('Y-m-d H'),
+                'reading_value' => $row->min('reading_value'),
+                'unit' => $row[0]->unit
+            ];
+        });
+        $_dailyAvg = $_daily->map(function($row) {
+            return (Object) [
+                'logged_at' => $row[0]->logged_at->format('Y-m-d H'),
+                'reading_value' => $row->avg('reading_value'),
+                'unit' => $row[0]->unit
+            ];
+        });
+
+        $yearlyMax = [];
+        $yearlyMin = [];
+        $yearlyAvg = [];
+
+        $monthlyMax = [];
+        $monthlyMin = [];
+        $monthlyAvg = [];
+
+        $dailyMax = [];
+        $dailyMin = [];
+        $dailyAvg = [];
+
+        foreach ($_yearlyMax as $row) {
+            $yearlyMax[] = $row;
+        }
+        foreach ($_yearlyMin as $row) {
+            $yearlyMin[] = $row;
+        }
+        foreach ($_yearlyAvg as $row) {
+            $yearlyAvg[] = $row;
         }
 
-        foreach ($_monthly as $row) {
-            $monthly[] = $row;
+        foreach ($_monthlyMax as $row) {
+            $monthlyMax[] = $row;
+        }
+        foreach ($_monthlyMin as $row) {
+            $monthlyMin[] = $row;
+        }
+        foreach ($_monthlyAvg as $row) {
+            $monthlyAvg[] = $row;
         }
 
-        foreach ($_daily as $row) {
-            $daily[] = $row;
+        foreach ($_dailyMax as $row) {
+            $dailyMax[] = $row;
+        }
+        foreach ($_dailyMin as $row) {
+            $dailyMin[] = $row;
+        }
+        foreach ($_dailyAvg as $row) {
+            $dailyAvg[] = $row;
         }
 
-        $data->yearly_readings = $yearly;
-        $data->monthly_readings = $monthly;
-        $data->daily_readings = $daily;
+
+        $data->yearly_readings = (Object) [
+            'max' => $yearlyMax,
+            'min' => $yearlyMin,
+            'avg' => $yearlyAvg
+        ];
+        $data->monthly_readings = (Object) [
+            'max' => $monthlyMax,
+            'min' => $monthlyMin,
+            'avg' => $monthlyAvg
+        ];
+        $data->daily_readings = (Object) [
+            'max' => $dailyMax,
+            'min' => $dailyMin,
+            'avg' => $dailyAvg
+        ];
 
         return response()->json([
             'data' => $data
