@@ -60,7 +60,7 @@ class SensorController extends Controller
     {
         $data = $sensor::where('id', $sensor->id)->firstOrFail();
 
-        $yearly = Reading::query()
+        $_yearly = Reading::query()
             ->select('reading_value', 'unit', 'logged_at')
             ->where('sensor_id', $sensor->id)
             ->whereBetween('logged_at', [
@@ -68,8 +68,18 @@ class SensorController extends Controller
                 Carbon::now()
             ])
             ->orderBy('logged_at')
-            ->get();
-        $monthly = Reading::query()
+            ->get()
+             ->groupBy(function($query) {
+                return $query->logged_at->format('Y-m');
+            })
+            ->map(function($row) {
+                return (Object) [
+                    'logged_at' => $row[0]->logged_at->format('Y-m'),
+                    'reading_value' => $row->sum('reading_value'),
+                    'unit' => $row[0]->unit
+                ];
+            });
+        $_monthly = Reading::query()
             ->select('reading_value', 'unit', 'logged_at')
             ->where('sensor_id', $sensor->id)
             ->whereBetween('logged_at', [
@@ -77,13 +87,49 @@ class SensorController extends Controller
                 Carbon::now()
             ])
             ->orderBy('logged_at', 'asc')
-            ->get();
-        $daily = Reading::query()
+            ->get()
+            ->groupBy(function($query) {
+                return $query->logged_at->format('Y-m-d');
+            })
+            ->map(function($row) {
+                return (Object) [
+                    'logged_at' => $row[0]->logged_at->format('Y-m-d'),
+                    'reading_value' => $row->sum('reading_value'),
+                    'unit' => $row[0]->unit
+                ];
+            });
+        $_daily = Reading::query()
             ->select('reading_value', 'unit', 'logged_at')
             ->where('sensor_id', $sensor->id)
             ->whereDate('logged_at', Carbon::now())
             ->orderBy('logged_at', 'asc')
-            ->get();
+            ->get()
+            ->groupBy(function($query) {
+                return $query->logged_at->format('Y-m-d H');
+            })
+            ->map(function($row) {
+                return (Object) [
+                    'logged_at' => $row[0]->logged_at->format('Y-m-d H'),
+                    'reading_value' => $row->sum('reading_value'),
+                    'unit' => $row[0]->unit
+                ];
+            });
+
+        $yearly = [];
+        $monthly = [];
+        $daily = [];
+
+        foreach ($_yearly as $row) {
+            $yearly[] = $row;
+        }
+
+        foreach ($_monthly as $row) {
+            $monthly[] = $row;
+        }
+
+        foreach ($_daily as $row) {
+            $daily[] = $row;
+        }
 
         $data->yearly_readings = $yearly;
         $data->monthly_readings = $monthly;
