@@ -54,7 +54,22 @@ class User extends Authenticatable
 
     public function isAdmin()
     {
-        $isAdmin = $this->roles()->where('user_id', Auth::user()->id);
-        return $isAdmin ? true : false;
+        if (Auth::user()) {
+            $isAdmin = $this->roles()->where('user_id', Auth::user()->id)->first();
+
+            switch ($isAdmin->id) {
+                case 1:
+                    return true;
+                    break;
+                case 2:
+                    return false;
+                    break;
+                default:
+                    return false;
+                    break;
+            }
+        }
+
+        return false;
     }
 }
