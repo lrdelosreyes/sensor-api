@@ -7,6 +7,7 @@ use App\Http\Requests\StoreSensorRequest;
 use App\Http\Requests\UpdateSensorRequest;
 use App\Models\Reading;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class SensorController extends Controller
 {
@@ -29,6 +30,12 @@ class SensorController extends Controller
      */
     public function indexPaginated()
     {
+        if (!$this->checkIfAllowed()) {
+            return response()->json([
+                'errors' => 'Not allowed'
+            ], 402);
+        }
+
         $sensors = Sensor::query()->paginate(15);
 
         return response()->json([
@@ -41,6 +48,12 @@ class SensorController extends Controller
      */
     public function store(StoreSensorRequest $request)
     {
+        if (!$this->checkIfAllowed()) {
+            return response()->json([
+                'errors' => 'Not allowed'
+            ], 402);
+        }
+
         $created = Sensor::query()->create([
             'name' => $request->name,
             'type' => $request->type,
@@ -229,6 +242,12 @@ class SensorController extends Controller
      */
     public function update(UpdateSensorRequest $request, Sensor $sensor)
     {
+        if (!$this->checkIfAllowed()) {
+            return response()->json([
+                'errors' => 'Not allowed'
+            ], 402);
+        }
+
         $updated = $sensor->update([
             'name' => $request->name ?? $sensor->name,
             'type' => $request->type ?? $sensor->type,
@@ -254,6 +273,12 @@ class SensorController extends Controller
      */
     public function destroy(Sensor $sensor)
     {
+        if (!$this->checkIfAllowed()) {
+            return response()->json([
+                'errors' => 'Not allowed'
+            ], 402);
+        }
+
         $deleted = $sensor->forceDelete();
 
         if (!$deleted) {
@@ -267,5 +292,13 @@ class SensorController extends Controller
         return response()->json([
             'data' => 'success'
         ], 200);
+    }
+
+    protected function checkIfAllowed() {
+        if (!Auth::user()->isAdmin()) {
+            return false;
+        }
+
+        return true;
     }
 }
