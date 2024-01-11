@@ -42,8 +42,8 @@ Route::group([
                 'data' => [
                     'id' => $request->user()->id,
                     'first_name' => $request->user()->first_name,
-                    'middle_name' => $request->user()->first_name,
-                    'last_name' => $request->user()->first_name,
+                    'middle_name' => $request->user()->middle_name,
+                    'last_name' => $request->user()->last_name,
                     'is_admin' => $request->user()->isAdmin(),
                     'username' => $request->user()->username,
                     'email' => $request->user()->email,
