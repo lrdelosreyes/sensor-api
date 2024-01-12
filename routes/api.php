@@ -17,23 +17,18 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-
 Route::group([
     'prefix' => 'v1',
     'middleware' => ['api']
 ], function() {
-    Route::get('/sensors', [SensorController::class, 'index'])->name('sensor.index');
+    Route::resource('sensors', SensorController::class)->only(['index']);
+    Route::resource('readings', ReadingController::class)->only(['store']);
 
     Route::name('user.')
         ->group(function() {
             Route::post('/register', [AuthController::class, 'register'])->name('register');
             Route::post('/login', [AuthController::class, 'login'])->name('login');
             Route::get('/unauthenticated', [AuthController::class, 'unauthenticated'])->name('unauthenticated');
-        });
-
-    Route::name('reading.')
-        ->group(function() {
-            Route::post('/readings', [ReadingController::class, 'store'])->name('store');
         });
 
     Route::middleware('auth:sanctum')->group(function() {
@@ -51,13 +46,9 @@ Route::group([
                 ]
             ]);
         });
-        Route::name('sensor.')
-            ->group(function() {
-                Route::get('/sensors/paginated', [SensorController::class, 'indexPaginated'])->name('index.paginated');
-                Route::get('/sensors/{sensor}', [SensorController::class, 'show'])->name('show');
-                Route::post('/sensors', [SensorController::class, 'store'])->name('store');
-                Route::patch('/sensors/{sensor}', [SensorController::class, 'update'])->name('update');
-                Route::delete('/sensors/{sensor}', [SensorController::class, 'destroy'])->name('destroy');
-            });
+
+        Route::get('/sensors/paginated', [SensorController::class, 'indexPaginated'])
+            ->name('sensor.index.paginated');
+        Route::resource('sensors', SensorController::class)->except(['index']);
     });
 });

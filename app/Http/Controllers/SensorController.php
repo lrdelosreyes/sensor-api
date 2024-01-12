@@ -2,15 +2,22 @@
 
 namespace App\Http\Controllers;
 
+// use App\Criteria\BySensorId;
+// use App\Criteria\LoggedAtBetween;
 use App\Models\Sensor;
 use App\Http\Requests\StoreSensorRequest;
 use App\Http\Requests\UpdateSensorRequest;
 use App\Models\Reading;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use App\Traits\ReadingStatistics;
+// use Illuminate\Support\Facades\DB;
 
 class SensorController extends Controller
 {
+    use ReadingStatistics;
+
     /**
      * Display a listing of the resource.
      */
@@ -71,7 +78,20 @@ class SensorController extends Controller
      */
     public function show(Sensor $sensor)
     {
-        $data = $sensor::where('id', $sensor->id)->firstOrFail();
+        $sensor = Sensor::findOrFail($sensor->id); // Assuming $sensorId is available
+
+        $data = $sensor->load('readings'); // Eager load readings for efficiency
+
+        # TODO: Criteria for query filters
+        // $readingsQuery = Reading::query()
+        //     ->select('reading_value', 'unit', 'logged_at')
+        //     ->withCriteria([
+        //         new BySensorId($sensor->id),
+        //         new LoggedAtBetween(
+        //             Carbon::createFromDate(Carbon::now()->year, '01', '01'),
+        //             Carbon::now()
+        //         )
+        //     ]);
 
         $_yearly = Reading::query()
             ->select('reading_value', 'unit', 'logged_at')
@@ -82,9 +102,10 @@ class SensorController extends Controller
             ])
             ->orderBy('logged_at')
             ->get()
-             ->groupBy(function($query) {
+            ->groupBy(function($query) {
                 return $query->logged_at->format('Y-m');
             });
+
         $_monthly = Reading::query()
             ->select('reading_value', 'unit', 'logged_at')
             ->where('sensor_id', $sensor->id)
@@ -107,71 +128,18 @@ class SensorController extends Controller
                 return $query->logged_at->format('Y-m-d H');
             });
 
-        $_yearlyMax = $_yearly->map(function($row) {
-            return (Object) [
-                'logged_at' => $row[0]->logged_at->format('Y-m'),
-                'reading_value' => $row->max('reading_value'),
-                'unit' => $row[0]->unit
-            ];
-        });
-        $_yearlyMin = $_yearly->map(function($row) {
-            return (Object) [
-                'logged_at' => $row[0]->logged_at->format('Y-m'),
-                'reading_value' => $row->min('reading_value'),
-                'unit' => $row[0]->unit
-            ];
-        });
-        $_yearlyAvg = $_yearly->map(function($row) {
-            return (Object) [
-                'logged_at' => $row[0]->logged_at->format('Y-m'),
-                'reading_value' => $row->avg('reading_value'),
-                'unit' => $row[0]->unit
-            ];
-        });
 
-        $_monthlyMax = $_monthly->map(function($row) {
-            return (Object) [
-                'logged_at' => $row[0]->logged_at->format('Y-m-d'),
-                'reading_value' => $row->max('reading_value'),
-                'unit' => $row[0]->unit
-            ];
-        });
-        $_monthlyMin = $_monthly->map(function($row) {
-            return (Object) [
-                'logged_at' => $row[0]->logged_at->format('Y-m-d'),
-                'reading_value' => $row->min('reading_value'),
-                'unit' => $row[0]->unit
-            ];
-        });
-        $_monthlyAvg = $_monthly->map(function($row) {
-            return (Object) [
-                'logged_at' => $row[0]->logged_at->format('Y-m-d'),
-                'reading_value' => $row->avg('reading_value'),
-                'unit' => $row[0]->unit
-            ];
-        });
+        $_yearlyMax = $this->calculateStatistics($_yearly, 'Y-m', 'max');
+        $_yearlyMin = $this->calculateStatistics($_yearly, 'Y-m', 'min');
+        $_yearlyAvg = $this->calculateStatistics($_yearly, 'Y-m', 'avg');
 
-        $_dailyMax = $_daily->map(function($row) {
-            return (Object) [
-                'logged_at' => $row[0]->logged_at->format('Y-m-d H'),
-                'reading_value' => $row->max('reading_value'),
-                'unit' => $row[0]->unit
-            ];
-        });
-        $_dailyMin = $_daily->map(function($row) {
-            return (Object) [
-                'logged_at' => $row[0]->logged_at->format('Y-m-d H'),
-                'reading_value' => $row->min('reading_value'),
-                'unit' => $row[0]->unit
-            ];
-        });
-        $_dailyAvg = $_daily->map(function($row) {
-            return (Object) [
-                'logged_at' => $row[0]->logged_at->format('Y-m-d H'),
-                'reading_value' => $row->avg('reading_value'),
-                'unit' => $row[0]->unit
-            ];
-        });
+        $_monthlyMax = $this->calculateStatistics($_monthly, 'Y-m-d', 'max');
+        $_monthlyMin = $this->calculateStatistics($_monthly, 'Y-m-d', 'min');
+        $_monthlyAvg = $this->calculateStatistics($_monthly, 'Y-m-d', 'avg');
+
+        $_dailyMax = $this->calculateStatistics($_daily, 'Y-m-d H', 'max');
+        $_dailyMin = $this->calculateStatistics($_daily, 'Y-m-d H', 'min');
+        $_dailyAvg = $this->calculateStatistics($_daily, 'Y-m-d H', 'avg');
 
         $yearlyMax = [];
         $yearlyMin = [];
@@ -294,8 +262,8 @@ class SensorController extends Controller
         ], 200);
     }
 
-    protected function checkIfAllowed() {
-        if (!Auth::user()->isAdmin()) {
+    private function checkIfAllowed() {
+        if (!User::find(Auth::user()->id)->isAdmin()) {
             return false;
         }
 
