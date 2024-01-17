@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-// use App\Criteria\BySensorId;
-// use App\Criteria\LoggedAtBetween;
+use App\Criteria\BySensorId;
+use App\Criteria\LoggedAtBetween;
 use App\Models\Sensor;
 use App\Http\Requests\StoreSensorRequest;
 use App\Http\Requests\UpdateSensorRequest;
@@ -78,68 +78,48 @@ class SensorController extends Controller
      */
     public function show(Sensor $sensor)
     {
+        $select = ['logged_at', 'reading_value', 'unit'];
         $sensor = Sensor::findOrFail($sensor->id); // Assuming $sensorId is available
 
         $data = $sensor->load('readings'); // Eager load readings for efficiency
 
-        # TODO: Criteria for query filters
-        // $readingsQuery = Reading::query()
-        //     ->select('reading_value', 'unit', 'logged_at')
-        //     ->withCriteria([
-        //         new BySensorId($sensor->id),
-        //         new LoggedAtBetween(
-        //             Carbon::createFromDate(Carbon::now()->year, '01', '01'),
-        //             Carbon::now()
-        //         )
-        //     ]);
-
-        $_yearly = Reading::query()
-            ->select('reading_value', 'unit', 'logged_at')
-            ->where('sensor_id', $sensor->id)
-            ->whereBetween('logged_at', [
-                Carbon::createFromDate(Carbon::now()->year, '01', '01'),
-                Carbon::now()
+        $readingsQuery = Reading::withCriteria([
+                new BySensorId($sensor->id),
+                new LoggedAtBetween(
+                    Carbon::createFromDate(Carbon::now()->year, '01', '01'),
+                    Carbon::now()
+                )
             ])
-            ->orderBy('logged_at')
-            ->get()
-            ->groupBy(function($query) {
-                return $query->logged_at->format('Y-m');
-            });
+            ->select($select)
+            ->orderBy('logged_at');
 
-        $_monthly = Reading::query()
-            ->select('reading_value', 'unit', 'logged_at')
-            ->where('sensor_id', $sensor->id)
-            ->whereBetween('logged_at', [
-                Carbon::createFromDate(Carbon::now()->year, Carbon::now()->month, '01'),
-                Carbon::now()
-            ])
-            ->orderBy('logged_at', 'asc')
-            ->get()
-            ->groupBy(function($query) {
-                return $query->logged_at->format('Y-m-d');
-            });
-        $_daily = Reading::query()
-            ->select('reading_value', 'unit', 'logged_at')
-            ->where('sensor_id', $sensor->id)
-            ->whereDate('logged_at', Carbon::now())
-            ->orderBy('logged_at', 'asc')
-            ->get()
-            ->groupBy(function($query) {
-                return $query->logged_at->format('Y-m-d H');
-            });
+        $yearly = $readingsQuery->get()->groupBy(function ($query) {
+            return $query->logged_at->format('Y-m');
+        })->map(function ($row) use($select) {
+            return $row->map->only($select);
+        });
+        $monthly = $readingsQuery->get()->groupBy(function ($query) {
+            return $query->logged_at->format('Y-m-d');
+        })->map(function ($row) use($select) {
+            return $row->map->only($select);
+        });
+        $daily = $readingsQuery->whereDate('logged_at', Carbon::now())->get()->groupBy(function ($query) {
+            return $query->logged_at->format('Y-m-d H');
+        })->map(function ($row) use($select) {
+            return $row->map->only($select);
+        });
 
+        $_yearlyMax = $this->calculateStatistics($yearly, 'Y-m', 'max');
+        $_yearlyMin = $this->calculateStatistics($yearly, 'Y-m', 'min');
+        $_yearlyAvg = $this->calculateStatistics($yearly, 'Y-m', 'avg');
 
-        $_yearlyMax = $this->calculateStatistics($_yearly, 'Y-m', 'max');
-        $_yearlyMin = $this->calculateStatistics($_yearly, 'Y-m', 'min');
-        $_yearlyAvg = $this->calculateStatistics($_yearly, 'Y-m', 'avg');
+        $_monthlyMax = $this->calculateStatistics($monthly, 'Y-m-d', 'max');
+        $_monthlyMin = $this->calculateStatistics($monthly, 'Y-m-d', 'min');
+        $_monthlyAvg = $this->calculateStatistics($monthly, 'Y-m-d', 'avg');
 
-        $_monthlyMax = $this->calculateStatistics($_monthly, 'Y-m-d', 'max');
-        $_monthlyMin = $this->calculateStatistics($_monthly, 'Y-m-d', 'min');
-        $_monthlyAvg = $this->calculateStatistics($_monthly, 'Y-m-d', 'avg');
-
-        $_dailyMax = $this->calculateStatistics($_daily, 'Y-m-d H', 'max');
-        $_dailyMin = $this->calculateStatistics($_daily, 'Y-m-d H', 'min');
-        $_dailyAvg = $this->calculateStatistics($_daily, 'Y-m-d H', 'avg');
+        $_dailyMax = $this->calculateStatistics($daily, 'Y-m-d H', 'max');
+        $_dailyMin = $this->calculateStatistics($daily, 'Y-m-d H', 'min');
+        $_dailyAvg = $this->calculateStatistics($daily, 'Y-m-d H', 'avg');
 
         $yearlyMax = [];
         $yearlyMin = [];

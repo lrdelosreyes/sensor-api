@@ -38,4 +38,11 @@ class Reading extends Model
     {
         return $this->belongsTo(Sensor::class);
     }
+
+    public function scopeWithCriteria($query, $criterias = []) {
+        foreach ($criterias as $critera) {
+            $query = $critera->apply($query);
+        }
+        return $query;
+    }
 }
